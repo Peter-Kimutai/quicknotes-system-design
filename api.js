@@ -29,7 +29,8 @@ async function request(path = "", options = {}) {
     };
 }
 
-function renderNote(note) {
+
+function renderNote(note, prepend = false) {
     const item = document.createElement("li");
     item.className = "note-item";
 
@@ -39,9 +40,47 @@ function renderNote(note) {
     const body = document.createElement("p");
     body.textContent = note.body || "No body provided.";
 
+    const deleteButton = document.createElement("button");
+    deleteButton.textContent = "Delete";
+    deleteButton.className = "delete-btn";
+
+    deleteButton.addEventListener("click", async () => {
+        deleteButton.disabled = true;
+        setStatus("Deleting note...");
+
+        try {
+            await request(`/${note.id}`, {
+                method: "DELETE"
+            });
+
+            item.remove();
+
+            setStatus(
+                "Note deleted successfully.",
+                "status-success"
+            );
+        } catch (error) {
+            setStatus(
+                "Unable to delete the note. Please try again.",
+                "status-error"
+            );
+            console.error("Delete note error:", error);
+        } finally {
+            if (item.isConnected) {
+                deleteButton.disabled = false;
+            }
+        }
+    });
+
     item.appendChild(title);
     item.appendChild(body);
-    notesList.appendChild(item);
+    item.appendChild(deleteButton);
+
+    if (prepend) {
+        notesList.prepend(item);
+    } else {
+        notesList.appendChild(item);
+    }
 }
 
 async function loadNotes() {
@@ -120,23 +159,8 @@ noteForm.addEventListener("submit", async (event) => {
             })
         });
 
-        // JSONPlaceholder simulates creation; it does not persist new posts.
-        // We add the returned post to the current page ourselves.
         const note = result.data;
-
-        const item = document.createElement("li");
-        item.className = "note-item";
-
-        const heading = document.createElement("h3");
-        heading.textContent = note.title;
-
-        const paragraph = document.createElement("p");
-        paragraph.textContent = note.body || "No body provided.";
-
-        item.appendChild(heading);
-        item.appendChild(paragraph);
-
-        notesList.prepend(item);
+         renderNote(note, true);
 
         setStatus(
             `Note created (status ${result.status}, id ${note.id}).`,
