@@ -77,3 +77,80 @@ async function loadNotes() {
 }
 
 loadButton.addEventListener("click", loadNotes);
+const noteForm = document.getElementById("note-form");
+const titleInput = document.getElementById("title-input");
+const bodyInput = document.getElementById("body-input");
+const submitButton = document.getElementById("submit-btn");
+
+noteForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const title = titleInput.value.trim();
+    const body = bodyInput.value.trim();
+
+    // Validate the title before making the request.
+    if (!title) {
+        setStatus("Please enter a note title.", "status-error");
+        titleInput.focus();
+        return;
+    }
+
+    if (title.length > 100) {
+        setStatus(
+            "The title must not exceed 100 characters.",
+            "status-error"
+        );
+        titleInput.focus();
+        return;
+    }
+
+    submitButton.disabled = true;
+    setStatus("Creating note...");
+
+    try {
+        const result = await request("", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                title: title,
+                body: body,
+                userId: 1
+            })
+        });
+
+        // JSONPlaceholder simulates creation; it does not persist new posts.
+        // We add the returned post to the current page ourselves.
+        const note = result.data;
+
+        const item = document.createElement("li");
+        item.className = "note-item";
+
+        const heading = document.createElement("h3");
+        heading.textContent = note.title;
+
+        const paragraph = document.createElement("p");
+        paragraph.textContent = note.body || "No body provided.";
+
+        item.appendChild(heading);
+        item.appendChild(paragraph);
+
+        notesList.prepend(item);
+
+        setStatus(
+            `Note created (status ${result.status}, id ${note.id}).`,
+            "status-success"
+        );
+
+        noteForm.reset();
+    } catch (error) {
+        setStatus(
+            "Unable to create the note. Please try again.",
+            "status-error"
+        );
+        console.error("Create note error:", error);
+    } finally {
+        submitButton.disabled = false;
+    }
+});
